@@ -143,7 +143,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: ${{ env.PKG_NAME }}-${{ matrix.target }}-${{ matrix.version }}
-          path: bin/packages/*/jackie264/${{ env.PKG_NAME }}*.apk
+          path: bin/packages/*/jackie264/*.apk
           if-no-files-found: ignore
 
   release:
@@ -171,45 +171,3 @@ jobs:
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: 🔑 Checkout custom-packages repo
-        uses: actions/checkout@v7
-        with:
-          repository: OneNAS-space/custom-packages
-          token: ${{ secrets.CUSTOM_PACKAGES_TOKEN }}
-          path: custom-packages
-
-      - name: 🚚 Update luci artifacts
-        run: |
-          set -e
-          CURRENT_PKG="${{ github.event.repository.name }}"
-          TARGET_DIR="custom-packages/releases/packages-25.12/luci"
-          mkdir -p "$TARGET_DIR"
-          
-          echo "Cleaning all old versions for $CURRENT_PKG in $TARGET_DIR..."
-          rm -f "$TARGET_DIR/${CURRENT_PKG}"-*.apk
-          
-          find ./release-assets -type f -name "*.apk" | while read -r f; do
-            echo "Deploying $(basename "$f") to $TARGET_DIR/"
-            cp "$f" "$TARGET_DIR/"
-          done
-          
-          echo "=== 25.12 Content ==="
-          ls -la "$TARGET_DIR/${CURRENT_PKG}"* || echo "No APKs found"
-
-          cd custom-packages
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add "releases/packages-25.12/luci/"
-          
-          if git diff --staged --quiet; then
-            echo "No changes to commit"
-            exit 0
-          fi
-          
-          git commit -m "Update $CURRENT_PKG to ${{ needs.check.outputs.tag_name }}"
-          for i in {1..5}; do
-            git pull --rebase origin main && \
-            git push origin main && break || \
-            (echo "Conflict detected, retrying in 5s..." && sleep 5)
-          done

@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# === Core security: self-background operation mechanism ===
+# === 核心安全：自后台运行机制 ===
 if [ "$1" != "bg_run" ]; then
     rm -f /var/run/update_core* /tmp/AdGuardHome_update.log
     touch /var/run/update_core
@@ -44,12 +44,12 @@ Check_Task(){
     running_tasks="$(ps w | grep -v grep | grep 'AdGuardHome' | grep 'update_core' | wc -l)"
 	case $1 in
 	force)
-		echo "Force update requested"
-		echo "Killing ${running_tasks} running tasks ..."
+		echo "已请求强制更新"
+		echo "正在终止 ${running_tasks} 个运行中的更新任务 ..."
 		ps w | grep -v grep | grep -v $$ | grep 'AdGuardHome' | grep 'update_core' | awk '{print $1}' | xargs kill -9 2>/dev/null
 		;;
 	*)
-		[ "${running_tasks}" -gt 2 ] && echo -e "There are ${running_tasks} update tasks already running. Please wait or stop them manually." && EXIT 2
+		[ "${running_tasks}" -gt 2 ] && echo -e "已有 ${running_tasks} 个更新任务正在运行。请稍候或手动停止它们。" && EXIT 2
 		;;
 	esac
 }
@@ -65,7 +65,7 @@ Check_Downloader() {
 		return
 	fi
 
-	echo "Neither curl nor wget is installed, cannot check updates!" >&2
+	echo "未安装 curl 或 wget，无法检查更新！" >&2
 	EXIT 1
 }
 
@@ -81,28 +81,28 @@ Check_Updates(){
 		_Downloader="wget -q -O -"
 	;;
 	esac
-	echo "[${PKG}] Checking for updates ..."
+	echo "[${PKG}] 正在检查更新 ..."
 	Cloud_Version="$(${_Downloader} ${core_api_url} 2>/dev/null | grep 'tag_name' | egrep -o "v[0-9].+[0-9.]" | awk 'NR==1')"
 	if [ -z "${Cloud_Version}" ]; then
-		echo "Failed to check updates, please check network." >&2
+		echo "检查更新失败，请检查网络连接。" >&2
 		EXIT 1
 	fi
 
 	if [ -f "${binpath}" ]; then
 		Current_Version="$(${binpath} --version 2>/dev/null | egrep -o "v[0-9].+[0-9]" | sed -r 's/(.*), c(.*)/\1/')"
 	else
-		Current_Version="unknown"
+		Current_Version="未知"
 	fi
-	[ -z "${Current_Version}" ] && Current_Version="unknown"
+	[ -z "${Current_Version}" ] && Current_Version="未知"
 
-	echo "Binary path: ${binpath%/*}"
-	echo "Current version: ${Current_Version}"
-	echo "Latest version: ${Cloud_Version}"
+	echo "二进制路径: ${binpath%/*}"
+	echo "当前版本: ${Current_Version}"
+	echo "最新版本: ${Cloud_Version}"
 
 	if [ ! "${Cloud_Version}" = "${Current_Version}" ] || [ "$1" = force ]; then
 		Update_Core || EXIT 1
 	else
-		echo "Already up to date."
+		echo "已经是最新版本。"
 		EXIT 0
 	fi
 	EXIT 0
@@ -110,29 +110,29 @@ Check_Updates(){
 
 Update_Core(){
 	rm -rf "/tmp/AdGuardHome_Update" > /dev/null 2>&1
-	mkdir -p "/tmp/AdGuardHome_Update" || { echo "Unable to create a temporary directory"; EXIT 1; }
+	mkdir -p "/tmp/AdGuardHome_Update" || { echo "无法创建临时目录"; EXIT 1; }
 
 	GET_Arch
 	eval link="${update_url}"
-	echo "Download link: ${link}"
-	echo "File name: ${link##*/}"
-	echo "Downloading AdGuardHome core ..."
+	echo "下载链接: ${link}"
+	echo "文件名: ${link##*/}"
+	echo "正在下载 AdGuardHome 内核 ..."
 
 	if ! $Downloader "/tmp/AdGuardHome_Update/${link##*/}" "${link}"; then
-		echo "Download failed."
+		echo "下载失败。"
 		rm -rf "/tmp/AdGuardHome_Update"
 		EXIT 1
 	fi
 
 	if [ "${link##*.}" = "gz" ]; then
-		echo "Extracting AdGuardHome ..."
+		echo "正在解压 AdGuardHome ..."
 		if ! tar -zxf "/tmp/AdGuardHome_Update/${link##*/}" -C "/tmp/AdGuardHome_Update/"; then
-			echo "Extraction failed!"
+			echo "解压失败！"
 			rm -rf "/tmp/AdGuardHome_Update"
 			EXIT 1
 		fi
 		if [ ! -e "/tmp/AdGuardHome_Update/AdGuardHome/AdGuardHome" ]; then
-			echo "Extraction failed: binary not found!"
+			echo "解压失败：找不到二进制文件！"
 			rm -rf "/tmp/AdGuardHome_Update"
 			EXIT 1
 		fi
@@ -142,23 +142,23 @@ Update_Core(){
 	fi
 
 	chmod +x "${downloadbin}" 2>/dev/null || true
-	echo "Core size: $(awk 'BEGIN{printf "%.2fMB\n",'$((`ls -l $downloadbin | awk '{print $5}'`))'/1000000}')"
+	echo "内核大小: $(awk 'BEGIN{printf "%.2fMB\n",'$((`ls -l $downloadbin | awk '{print $5}'`))'/1000000}')"
 
 	/etc/init.d/AdGuardHome stop > /dev/null 2>&1
-	echo "Moving AdGuardHome binary to ${binpath%/*} ..."
+	echo "正在将 AdGuardHome 二进制文件移动到 ${binpath%/*} ..."
 
 	if ! mv -f "${downloadbin}" "${binpath}"; then
-		echo -e "The core movement failed! \nIt may be caused by insufficient space."
+		echo -e "内核文件移动失败！\n可能是磁盘空间不足所致。"
 		rm -rf "/tmp/AdGuardHome_Update"
 		EXIT 1
 	fi
 
 	rm -rf /tmp/AdGuardHome_Update
 	chmod +x ${binpath}
-    echo "Restarting AdGuardHome service ..."
+    echo "正在重启 AdGuardHome 服务 ..."
     /etc/init.d/adguardhome restart > /dev/null 2>&1
 
-	echo "AdGuardHome core updated successfully!"
+	echo "AdGuardHome 内核更新成功！"
 	touch /var/run/update_core_done
     EXIT 0
 }
@@ -200,10 +200,10 @@ GET_Arch() {
 		Arch="arm64"
 	;;
 	*)
-		echo "Unsupported architecture: [${Archt}]" 
+		echo "不支持的架构: [${Archt}]" 
 		EXIT 1
 	esac
-    echo "Detected architecture: ${Arch}"
+    echo "检测到架构: ${Arch}"
 }
 
 
